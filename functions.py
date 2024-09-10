@@ -100,15 +100,133 @@ def replace_old_nna_aon(df, aov_df):
 
     # Identify the rows in unique_df that were originally from formatted_df
     # Using `isin` requires tuple conversion for row comparisons
-    original_rows = unique_df[unique_df.apply(tuple, axis=1).isin(df.apply(tuple, axis=1))]
+    original_rows = unique_df[unique_df.apply(
+        tuple, axis=1).isin(df.apply(tuple, axis=1))]
 
     # Append only unique rows from formatted_df that are not in other_df
-    unique_formatted_df = df[~df.apply(tuple, axis=1).isin(original_rows.apply(tuple, axis=1))]
+    unique_formatted_df = df[~df.apply(tuple, axis=1).isin(
+        original_rows.apply(tuple, axis=1))]
 
     # Append unique rows from formatted_df to other_df
     updated_df = pd.concat([aov_df, unique_formatted_df], ignore_index=True)
-    print(len(updated_df))
+    print("updated_df:", len(updated_df))
+    print("convert_csv_fields:", len(convert_csv_fields(updated_df)))
+    return convert_csv_fields(aov_df)
 
-    return updated_df
-    
 
+def convert_csv_fields(df):
+    field_types = {
+        'Site_Lat': 'Double',
+        'Site_Long': 'Double',
+        'Proj_Start_Year': 'Double',
+        'Proj_End_Year': 'Double',
+    }
+    # Loop through the dictionary and convert the specified fields
+    for field, field_type in field_types.items():
+        if field in df.columns:
+            if field_type.lower() == 'double':
+                df[field] = pd.to_numeric(
+                    df[field], errors='coerce').astype(float)
+            elif field_type.lower() == 'text':
+                df[field] = df[field].astype(str)
+            elif field_type.lower() == 'int':
+                df[field] = pd.to_numeric(
+                    df[field], errors='coerce').astype('Int64')
+            elif field_type.lower() == 'date':
+                df[field] = pd.to_datetime(df[field], errors='coerce')
+            # Add more types as needed
+
+    df['Proj_Start_Year'] = df['Proj_Start_Year'].apply(
+        lambda x: int(x) if not pd.isna(x) else pd.NA)
+    df['Proj_End_Year'] = df['Proj_End_Year'].apply(
+        lambda x: int(x) if not pd.isna(x) else pd.NA)
+
+    # Save the formatted DataFrame to a new CSV file
+    return df
+
+
+def delete_feature_class(workspace, featureClass):
+    feature_class_path = os.path.join(workspace, featureClass)
+    try:
+        arcpy.DeleteFeatures_management(feature_class_path)
+        print("Deleted Feature Class")
+    except arcpy.ExecuteError as e:
+        print(f"Failed to delete features: {e}")
+
+
+def create_feature_class_from_dataframe(df, output_gdb, feature_class_name):
+    # Set environment settings
+    arcpy.env.workspace = output_gdb
+
+    # Create a feature class
+    feature_class = arcpy.management.CreateFeatureclass(
+        output_gdb, feature_class_name, "POINT", spatial_reference=arcpy.SpatialReference(4326))
+
+    # Add fields to the feature class based on the CSV
+    text_fields = []
+    long_fields = []
+
+    for column in df.columns:
+        if column.lower() == 'site_lat' or column.lower() == 'site_long':
+            arcpy.management.AddField(feature_class, column, "Double")
+            long_fields.append(column)
+        elif column.lower() == 'proj_start_year' or column.lower() == 'proj_end_year':
+            arcpy.management.AddField(feature_class, column, "LONG")
+            long_fields.append(column)
+        else:
+            max_length = 255
+            # Set the max length based on the field values
+            max_val_len = df[column].apply(lambda x: len(
+                str(x)) if pd.notnull(x) else 0).max()
+            # Adjust the max length within limits
+            max_length = max(max_length, min(1000, max_val_len))
+            arcpy.management.AddField(
+                feature_class, column, "TEXT", field_length=max_length)
+            text_fields.append(column)
+
+    # Define the insert cursor fields
+    cursor_fields = ['SHAPE@XY'] + long_fields + text_fields
+
+    # Insert rows into the feature class
+    with arcpy.da.InsertCursor(feature_class, cursor_fields) as cursor:
+        for index, row in df.iterrows():
+            latitude = row['Site_Lat']
+            longitude = row['Site_Long']
+            values = [(longitude, latitude)] + [row[col]
+                                                for col in long_fields + text_fields]
+            try:
+                cursor.insertRow(values)
+            except Exception as e:
+                print(f"Error inserting row {index}: {e}")
+
+    print(
+        f"Feature class '{feature_class_name}' created successfully in {output_gdb}")
+
+
+def update_feature_class_from_dataframe(df, workspace, feature_class):
+    # Define the spatial reference (WGS 1984 - EPSG:4326)
+    spatial_reference = arcpy.SpatialReference(4326)
+    fields = schema.AOV_Schema
+    feature_class_path = os.path.join(workspace, feature_class)
+
+    # Iterate through each row in the DataFrame
+    with arcpy.da.InsertCursor(feature_class_path, fields + ['SHAPE@']) as cursor:
+        for _, row in df.iterrows():
+            # Extract Longitude and Latitude values
+            longitude = row['Site_Long']
+            latitude = row['Site_Lat']
+
+            # Create the PointGeometry object
+            point_geometry = arcpy.PointGeometry(
+                arcpy.Point(longitude, latitude), spatial_reference)
+
+            # Create a list of values for other fields
+            values = [row[field] for field in fields]
+
+            # Append the point geometry to the values list
+            values.append(point_geometry)
+
+            # Insert the row into the feature class
+            cursor.insertRow(values)
+    print(
+        f"Feature class '{feature_class}' created successfully in {workspace}")

@@ -51,8 +51,9 @@ AOV_Schema = [
     "Site_Abstract",
     "Site_ID_BAID",
     "Site_Start_Year",
-    "Site_End_Year"
+    "Site_End_Year",
 ]
+
 aov_hardcode_values = {
     "OBJECTID":"",
     "Proj_Award": "",
@@ -104,5 +105,5 @@ aov_hardcode_values = {
     "Site_Abstract": "",
     "Site_ID_BAID": "",
     "Site_Start_Year": "",
-    "Site_End_Year": ""
+    "Site_End_Year": "",
 }
