@@ -1,4 +1,5 @@
 import functions as fn
+import os
 
 
 def main(ARMAP_input_df, AOV_input_df, AOV_workspace, AOV_featureClass):
@@ -16,6 +17,7 @@ if __name__ == "__main__":
     FEATURE_CLASS_OUPUT = "DBO.ARMAP_Map"
     ARMAP_FEATURE_CLASS_INPUT = "DBO.ARMAP_Field_Dates"
     AOV_FEATURE_CLASS_INPUT = 'Arctic_Observing_Sites'
+    AOV_FEATURE_CLASS_BACKUP = 'Arctic_Observing_Sites_Backup'
 
     ARMAP_WORKSPACE = r'C:\\ArcGIS Container\\SDE_Connection_Files\\Sel-gis18-script_dev.sde'
     AOV_WORKSPACE = r'C:\\ArcGIS Container\\Maps\\AOV Observing Sites\\Arctic_Observing_Sites\\Arctic_Observing_Sites.gdb'

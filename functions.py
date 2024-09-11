@@ -87,6 +87,13 @@ def format_nna_aon(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+# Function to handle NaN values
+def handle_nan(value):
+    if pd.isna(value):
+        return None  # or use a suitable default value
+    return value
+
+
 def replace_old_nna_aon(df, aov_df):
     # Ensure the DataFrames have the same columns
     if set(df.columns) != set(aov_df.columns):
@@ -109,17 +116,16 @@ def replace_old_nna_aon(df, aov_df):
 
     # Append unique rows from formatted_df to other_df
     updated_df = pd.concat([aov_df, unique_formatted_df], ignore_index=True)
-    print("updated_df:", len(updated_df))
     print("convert_csv_fields:", len(convert_csv_fields(updated_df)))
-    return convert_csv_fields(aov_df)
+    return convert_csv_fields(updated_df)
 
 
 def convert_csv_fields(df):
     field_types = {
         'Site_Lat': 'Double',
         'Site_Long': 'Double',
-        'Proj_Start_Year': 'Double',
-        'Proj_End_Year': 'Double',
+        'Proj_Start_Year': 'Integer',
+        'Proj_End_Year': 'Integer',
     }
     # Loop through the dictionary and convert the specified fields
     for field, field_type in field_types.items():
@@ -203,30 +209,167 @@ def create_feature_class_from_dataframe(df, output_gdb, feature_class_name):
         f"Feature class '{feature_class_name}' created successfully in {output_gdb}")
 
 
+def print_feature_class_schema(feature_class):
+    # Get field information
+    fields = arcpy.ListFields(feature_class)
+
+    print(f"Fields in {feature_class}:")
+    for field in fields:
+        print(
+            f"\tField: {field.name}, Type: {field.type}, Length: {field.length}")
+
+
 def update_feature_class_from_dataframe(df, workspace, feature_class):
     # Define the spatial reference (WGS 1984 - EPSG:4326)
     spatial_reference = arcpy.SpatialReference(4326)
-    fields = schema.AOV_Schema
     feature_class_path = os.path.join(workspace, feature_class)
 
-    # Iterate through each row in the DataFrame
-    with arcpy.da.InsertCursor(feature_class_path, fields + ['SHAPE@']) as cursor:
-        for _, row in df.iterrows():
-            # Extract Longitude and Latitude values
-            longitude = row['Site_Long']
-            latitude = row['Site_Lat']
+    with arcpy.da.InsertCursor(feature_class_path, schema.AOV_Schema_Feature_Class) as cursor:
+        for index, row in df.iterrows():
+            # Extract Longitude and Latitude values from the DataFrame
+            OBJECTID = handle_nan(row['OBJECTID'])
+            Proj_Award = handle_nan(row['Proj_Award'])
+            Proj_Funding_Country = handle_nan(row['Proj_Funding_Country'])
+            Proj_Funding_Agency = handle_nan(row['Proj_Funding_Agency'])
+            Proj_Program_Code = handle_nan(row['Proj_Program_Code'])
+            Proj_Start_Year = handle_nan(row['Proj_Start_Year'])
+            Proj_End_Year = handle_nan(row['Proj_End_Year'])
+            Proj_Title = handle_nan(row['Proj_Title'])
+            Proj_AON = handle_nan(row['Proj_AON'])
+            Proj_Initiative = handle_nan(row['Proj_Initiative'])
+            Proj_Discipline = handle_nan(row['Proj_Discipline'])
+            Proj_Institution = handle_nan(row['Proj_Institution'])
+            Proj_Contact_Name = handle_nan(row['Proj_Contact_Name'])
+            Proj_Contact_Email = handle_nan(row['Proj_Contact_Email'])
+            Proj_Contact_Phone = handle_nan(row['Proj_Contact_Phone'])
+            Proj_Contact_Role = handle_nan(row['Proj_Contact_Role'])
+            Proj_Page_Link = handle_nan(row['Proj_Page_Link'])
+            Proj_Metadata_Link = handle_nan(row['Proj_Metadata_Link'])
+            Site_Name = handle_nan(row['Site_Name'])
+            Site_ID_AOV = handle_nan(row['Site_ID_AOV'])
+            Site_ID_Alt1 = handle_nan(row['Site_ID_Alt1'])
+            Site_ID_Alt2 = handle_nan(row['Site_ID_Alt2'])
+            Site_Country = handle_nan(row['Site_Country'])
+            Site_Place = handle_nan(row['Site_Place'])
+            Site_Lat = handle_nan(row['Site_Lat'])
+            Site_Long = handle_nan(row['Site_Long'])
+            Site_Accuracy = handle_nan(row['Site_Accuracy'])
+            Site_Depth = handle_nan(row['Site_Depth'])
+            Site_Elevation = handle_nan(row['Site_Elevation'])
+            Site_Start_Date = handle_nan(row['Site_Start_Date'])
+            Site_End_Date = handle_nan(row['Site_End_Date'])
+            Site_Type = handle_nan(row['Site_Type'])
+            Site_GCMD_Science = handle_nan(row['Site_GCMD_Science'])
+            Site_GCMD_Platform = handle_nan(row['Site_GCMD_Platform'])
+            Site_GCMD_Instrument = handle_nan(row['Site_GCMD_Instrument'])
+            Data_Page_Link1 = handle_nan(row['Data_Page_Link1'])
+            Data_Page_Link2 = handle_nan(row['Data_Page_Link2'])
+            Data_Metadata_Link = handle_nan(row['Data_Metadata_Link'])
+            db_Metadata_Sources = handle_nan(row['db_Metadata_Sources'])
+            db_Metadata_Wrangler = handle_nan(row['db_Metadata_Wrangler'])
+            db_Date_Created = handle_nan(row['db_Date_Created'])
+            db_Date_Export = handle_nan(row['db_Date_Export'])
+            db_Date_Modified = handle_nan(row['db_Date_Modified'])
+            db_Notes = handle_nan(row['db_Notes'])
+            Site_Name_IDs = handle_nan(row['Site_Name_IDs'])
+            Site_Lat_Long = handle_nan(row['Site_Lat_Long'])
+            Site_Location_Country = handle_nan(row['Site_Location_Country'])
+            Site_Abstract = handle_nan(row['Site_Abstract'])
+            Site_ID_BAID = handle_nan(row['Site_ID_BAID'])
+            Site_Start_Year = handle_nan(row['Site_Start_Year'])
+            Site_End_Year = handle_nan(row['Site_End_Year'])
 
-            # Create the PointGeometry object
-            point_geometry = arcpy.PointGeometry(
-                arcpy.Point(longitude, latitude), spatial_reference)
-
-            # Create a list of values for other fields
-            values = [row[field] for field in fields]
-
-            # Append the point geometry to the values list
-            values.append(point_geometry)
+            pointGeometry = arcpy.PointGeometry(arcpy.Point(
+                Site_Long, Site_Lat), spatial_reference)
 
             # Insert the row into the feature class
-            cursor.insertRow(values)
+            cursor.insertRow((
+                OBJECTID,
+                Proj_Award,
+                Proj_Funding_Country,
+                Proj_Funding_Agency,
+                Proj_Program_Code,
+                Proj_Start_Year,
+                Proj_End_Year,
+                Proj_Title,
+                Proj_AON,
+                Proj_Initiative,
+                Proj_Discipline,
+                Proj_Institution,
+                Proj_Contact_Name,
+                Proj_Contact_Email,
+                Proj_Contact_Phone,
+                Proj_Contact_Role,
+                Proj_Page_Link,
+                Proj_Metadata_Link,
+                Site_Name,
+                Site_ID_AOV,
+                Site_ID_Alt1,
+                Site_ID_Alt2,
+                Site_Country,
+                Site_Place,
+                Site_Lat,
+                Site_Long,
+                Site_Accuracy,
+                Site_Depth,
+                Site_Elevation,
+                Site_Start_Date,
+                Site_End_Date,
+                Site_Type,
+                Site_GCMD_Science,
+                Site_GCMD_Platform,
+                Site_GCMD_Instrument,
+                Data_Page_Link1,
+                Data_Page_Link2,
+                Data_Metadata_Link,
+                db_Metadata_Sources,
+                db_Metadata_Wrangler,
+                db_Date_Created,
+                db_Date_Export,
+                db_Date_Modified,
+                db_Notes,
+                Site_Name_IDs,
+                Site_Lat_Long,
+                Site_Location_Country,
+                Site_Abstract,
+                Site_ID_BAID,
+                Site_Start_Year,
+                Site_End_Year,
+                pointGeometry
+            ))
+
+    del cursor
+
     print(
         f"Feature class '{feature_class}' created successfully in {workspace}")
+
+
+def replace_feature_class_content(source_fc, dest_fc):
+    # Check if the source feature class exists
+    if not arcpy.Exists(source_fc):
+        raise OSError(f"Source feature class '{source_fc}' does not exist.")
+
+    # Check if the destination path exists
+    dest_path = os.path.dirname(dest_fc)
+    if not os.path.exists(dest_path):
+        raise OSError(f"Destination path '{dest_path}' does not exist.")
+
+    # Check if the destination feature class exists
+    if arcpy.Exists(dest_fc):
+        print(f"Destination feature class '{dest_fc}' exists. Deleting it...")
+        # Delete the destination feature class
+        arcpy.Delete_management(dest_fc)
+
+    # Create a new feature class with the same schema as the source feature class
+    print(f"Creating new feature class '{dest_fc}'...")
+    arcpy.CreateFeatureclass_management(
+        out_path=dest_path,
+        out_name=os.path.basename(dest_fc),
+        template=source_fc
+    )
+
+    # Copy features from the source feature class to the new destination feature class
+    print(f"Copying features from '{source_fc}' to '{dest_fc}'...")
+    arcpy.CopyFeatures_management(source_fc, dest_fc)
+
+    print("Content replacement complete.")
