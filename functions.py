@@ -78,6 +78,9 @@ def format_nna_aon(df: pd.DataFrame) -> pd.DataFrame:
     df['Site_Abstract'] = df['Abstract']
     df['Site_Place'] = df['Place']
     df['Proj_Page_Link'] = 'https://api.battellearcticgateway.org/v1/reports/grant?proposal_number='+df['Award_Num']
+    # read Proj_Program_Code and assign Y if it contains 'AON' else N
+    df['Proj_AON'] = df['Proj_Program_Code'].apply(
+        lambda x: 'Y' if 'AON' in x else 'N')
 
     # Keep only the required fields in the DataFrame
     df = df[schema.AOV_Schema]
@@ -94,6 +97,7 @@ def handle_nan(value):
 
 def replace_old_nna_aon(df: pd.DataFrame, aov_df: pd.DataFrame) -> pd.DataFrame:
     total_records_before = len(aov_df)  # 50039
+    aov_df.to_csv('aov_df.csv')
     logging.info(
         f"Total records in FeatureClass before update: {total_records_before}")
 
@@ -113,10 +117,13 @@ def replace_old_nna_aon(df: pd.DataFrame, aov_df: pd.DataFrame) -> pd.DataFrame:
     # merge the NNA/AON records with the new records
     merged_df = pd.concat([df, aov_nna_aon])
     logging.info(f"Merged NNA/AON records: {len(merged_df)}")
-    merged_df.to_csv('new_nna_and_aon_nna.csv', index=False)
+    merged_df.to_csv('new_nna_and_aon_nna.csv')
 
+    # Get all column names except the column to ignore
+    columns_to_consider = [col for col in merged_df.columns if col != "OBJECTID"]
     # Drop duplicates from aov nna/aon records and new records merged
-    unique_df = merged_df.drop_duplicates(keep=False)
+    unique_df = merged_df.drop_duplicates(
+        subset=columns_to_consider, keep=False)
     logging.info(
         f"Total unique records after dropping duplicates: {len(unique_df)}")
 
