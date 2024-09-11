@@ -21,9 +21,9 @@ def main(ARMAP_input_df, AOV_input_df, AOV_workspace, AOV_featureClass):
 
     aov_updated = fn.replace_old_nna_aon(nna_aon_formatted, AOV_input_df)
 
-    # fn.delete_feature_class(AOV_workspace, AOV_featureClass)
-    # fn.update_feature_class_from_dataframe(
-    #     aov_updated, AOV_workspace, AOV_featureClass)
+    fn.delete_feature_class(AOV_workspace, AOV_featureClass)
+    fn.update_feature_class_from_dataframe(
+        aov_updated, AOV_workspace, AOV_featureClass)
     return
 
 

@@ -96,48 +96,57 @@ def handle_nan(value):
 
 
 def replace_old_nna_aon(df: pd.DataFrame, aov_df: pd.DataFrame) -> pd.DataFrame:
-    total_records_before = len(aov_df)  # 50039
-    aov_df.to_csv('aov_df.csv')
-    logging.info(
-        f"Total records in FeatureClass before update: {total_records_before}")
+    aov_nna_aon_subset = aov_df
+    # aov_nna_aon_subset = pd.read_csv('aov_nna_aon_subset.csv')
 
-    if len(df) == 0 or len(aov_df) == 0:
+    total_records_before = len(aov_df)  # 50039
+    logging.info(
+        f"Total records in FeatureClass: {total_records_before}, Total records found in ARMAP: {len(df)}")
+    
+    # 1. Remove duplicates from the new DataFrame
+    columns_to_consider = [col for col in df.columns if col != "OBJECTID"]
+    df = df.drop_duplicates(subset=columns_to_consider)
+    logging.info(
+        f"1. Remove duplicates from the new DataFrame: {len(df)}")
+    
+    if len(df) == 0 or len(aov_nna_aon_subset) == 0:
         logging.info("No NNA/AON records to update")
-        return aov_df
+        return aov_nna_aon_subset
 
     # Ensure the DataFrames have the same columns
-    if set(df.columns) != set(aov_df.columns):
+    if set(df.columns) != set(aov_nna_aon_subset.columns):
         raise ValueError("Both DataFrames must have the same columns")
 
-    # find the NNA/AON records in the AOV DataFrame
-    aov_nna_aon = find_nna_aon(aov_df, ['Proj_Title', 'Proj_Program_Code'])
-    logging.info(f"Total NNA/AON found records: {len(df)}")
-    logging.info(f"Total NNA/AON records in AOV: {len(aov_nna_aon)}")
-
-    # merge the NNA/AON records with the new records
-    merged_df = pd.concat([df, aov_nna_aon])
-    logging.info(f"Merged NNA/AON records: {len(merged_df)}")
-    merged_df.to_csv('new_nna_and_aon_nna.csv')
-
-    # Get all column names except the column to ignore
-    columns_to_consider = [col for col in merged_df.columns if col != "OBJECTID"]
-    # Drop duplicates from aov nna/aon records and new records merged
-    unique_df = merged_df.drop_duplicates(
-        subset=columns_to_consider, keep=False)
+    # 2. Find the NNA/AON records in the AOV DataFrame
+    aov_nna_aon = find_nna_aon(
+        aov_nna_aon_subset, ['Proj_Title', 'Proj_Program_Code'])
     logging.info(
-        f"Total unique records after dropping duplicates: {len(unique_df)}")
+        f"2. Find the NNA/AON records in the AOV DataFrame: {len(aov_nna_aon)}")
 
-    # remove the NNA/AON records from the AOV DataFrame
-    aov_df = aov_df[~aov_df.index.isin(aov_nna_aon.index)]
-    logging.info(f"Total AOV records after removal: {len(aov_df)}")
-
-    # Concatenate both dataframes
-    updated_aov = pd.concat([unique_df, aov_df])
-
+    # 3. Remove the NNA/AON records from the AOV DataFrame
+    aov_no_nna_aon = aov_nna_aon_subset[~aov_nna_aon_subset.index.isin(
+        aov_nna_aon.index)]
     logging.info(
-        f"Total records in FeatureClass after update: {len(updated_aov)}")
+        f"3. Remove the NNA/AON records from the AOV DataFrame: {len(aov_no_nna_aon)}")
+
+    # 4. Merge the NNA/AON records in AOV with the new records
+    merged_new_and_aov_nna_aon = pd.concat([df, aov_nna_aon])
     logging.info(
-        f"Total new NNA/AON records after update: {len(updated_aov) - total_records_before}")
+        f"4. Merge the NNA/AON records in AOV with the new records: {len(df)} + {len(aov_nna_aon)} = {len(merged_new_and_aov_nna_aon)}")
+
+    # 5. Remove duplicates from the merged DataFrame
+    columns_to_consider = [col for col in df.columns if col != "OBJECTID"]
+    no_nna_aon_duplicates = merged_new_and_aov_nna_aon.drop_duplicates(
+        subset=columns_to_consider)
+    total_after_remove_duplicates = len(merged_new_and_aov_nna_aon)- len(no_nna_aon_duplicates)
+    logging.info(
+        f"5. Remove duplicates from the merged DataFrame: {len(merged_new_and_aov_nna_aon)} - {len(no_nna_aon_duplicates)} = {total_after_remove_duplicates}")
+
+    # 6. Concatenate the unique records with the remaining AOV records
+    updated_aov = pd.concat([no_nna_aon_duplicates, aov_no_nna_aon])
+    logging.info(
+        f"6. Concatenate the unique records with the remaining AOV records: {len(updated_aov)}")
+    
     logging.info(f"----------------------------------------------------")
 
     return convert_csv_fields(updated_aov)
