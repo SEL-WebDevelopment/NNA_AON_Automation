@@ -220,9 +220,8 @@ def print_feature_class_schema(feature_class):
 
 
 def update_feature_class_from_dataframe(df, workspace, feature_class):
-    # Define the spatial reference (WGS 1984 - EPSG:4326)
-    spatial_reference = arcpy.SpatialReference(4326)
     feature_class_path = os.path.join(workspace, feature_class)
+    spatial_reference = arcpy.SpatialReference(3395)  # World Mercator
 
     with arcpy.da.InsertCursor(feature_class_path, schema.AOV_Schema_Feature_Class) as cursor:
         for index, row in df.iterrows():
@@ -279,8 +278,10 @@ def update_feature_class_from_dataframe(df, workspace, feature_class):
             Site_Start_Year = handle_nan(row['Site_Start_Year'])
             Site_End_Year = handle_nan(row['Site_End_Year'])
 
-            pointGeometry = arcpy.PointGeometry(arcpy.Point(
-                Site_Long, Site_Lat), spatial_reference)
+            
+            point_geometry = arcpy.PointGeometry(arcpy.Point(Site_Long, Site_Lat), arcpy.SpatialReference(4326))
+            projected_geometry = point_geometry.projectAs(spatial_reference)
+               
 
             # Insert the row into the feature class
             cursor.insertRow((
@@ -335,10 +336,9 @@ def update_feature_class_from_dataframe(df, workspace, feature_class):
                 Site_ID_BAID,
                 Site_Start_Year,
                 Site_End_Year,
-                pointGeometry
+                projected_geometry
             ))
 
-    del cursor
 
     print(
         f"Feature class '{feature_class}' created successfully in {workspace}")
