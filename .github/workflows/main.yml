@@ -1,0 +1,50 @@
+name: Push CSV to GitHub
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run_service:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt  # Install all dependencies from requirements.txt
+
+      - name: Run service.py script
+        run: |
+          python service.py  # This will run the script located in the root directory
+
+  push_csv:
+    runs-on: ubuntu-latest
+    needs: run_service  # This ensures that push_csv only runs if run_service is successful
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt  # Install all dependencies
+
+      - name: Run Python script to push CSV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python github_automation.py  # Replace with your actual script name

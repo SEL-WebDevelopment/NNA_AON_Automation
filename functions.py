@@ -148,6 +148,11 @@ def replace_old_nna_aon(df: pd.DataFrame, aov_df: pd.DataFrame) -> pd.DataFrame:
         f"6. Concatenate the unique records with the remaining AOV records: {len(updated_aov)}")
     
     logging.info(f"----------------------------------------------------")
+    # create a csv file to store the updated_aov with today's date
+    # today's date
+    today = pd.to_datetime('today').strftime('%Y-%m-%d')
+    updated_aov.to_csv(f"versions\\updated_aov_{today}.csv", index=False)
+    
 
     return convert_csv_fields(updated_aov)
 
