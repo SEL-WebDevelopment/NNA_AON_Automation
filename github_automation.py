@@ -7,7 +7,7 @@ def push_csv_to_github():
     file_path = f"versions\\updated_aov_{today}.csv"
     
     # Stage the CSV file
-    subprocess.run(['git', 'add', file_path], check=True)
+    subprocess.run(['git', 'add', "."], check=True)
 
     # Commit the changes
     subprocess.run(['git', 'commit', '-m', f"updated_aov_{today}.csv successfully pushed!"], check=True)

@@ -38,3 +38,19 @@
 09-11-2024 14:40:42 5. Remove duplicates from the merged DataFrame: 24509 - 23810 = 699
 09-11-2024 14:40:42 6. Concatenate the unique records with the remaining AOV records: 51437
 09-11-2024 14:40:42 ----------------------------------------------------
+09-11-2024 15:00:04 Total records in FeatureClass: 51437, Total records found in ARMAP: 3121
+09-11-2024 15:00:04 1. Remove duplicates from the new DataFrame: 699
+09-11-2024 15:00:04 2. Find the NNA/AON records in the AOV DataFrame: 23810
+09-11-2024 15:00:04 3. Remove the NNA/AON records from the AOV DataFrame: 27627
+09-11-2024 15:00:05 4. Merge the NNA/AON records in AOV with the new records: 699 + 23810 = 24509
+09-11-2024 15:00:05 5. Remove duplicates from the merged DataFrame: 24509 - 23810 = 699
+09-11-2024 15:00:05 6. Concatenate the unique records with the remaining AOV records: 51437
+09-11-2024 15:00:05 ----------------------------------------------------
+09-11-2024 15:03:38 Total records in FeatureClass: 51437, Total records found in ARMAP: 3121
+09-11-2024 15:03:38 1. Remove duplicates from the new DataFrame: 699
+09-11-2024 15:03:39 2. Find the NNA/AON records in the AOV DataFrame: 23810
+09-11-2024 15:03:39 3. Remove the NNA/AON records from the AOV DataFrame: 27627
+09-11-2024 15:03:39 4. Merge the NNA/AON records in AOV with the new records: 699 + 23810 = 24509
+09-11-2024 15:03:39 5. Remove duplicates from the merged DataFrame: 24509 - 23810 = 699
+09-11-2024 15:03:39 6. Concatenate the unique records with the remaining AOV records: 51437
+09-11-2024 15:03:39 ----------------------------------------------------
