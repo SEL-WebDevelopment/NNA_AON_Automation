@@ -1,11 +1,26 @@
 import functions as fn
 import os
+import logging
+import sys
 
 
 def main(ARMAP_input_df, AOV_input_df, AOV_workspace, AOV_featureClass):
-    nna_aon_from_armap = fn.find_nna_aon(ARMAP_input_df)
+    logging.basicConfig(
+        handlers=[
+            logging.FileHandler(r'info.log'),
+            logging.StreamHandler(sys.stdout)],
+        format='%(asctime)s %(message)s',
+        datefmt='%m-%d-%Y %H:%M:%S',
+        level=logging.INFO)
+
+    nna_aon_from_armap = fn.find_nna_aon(
+        ARMAP_input_df, ['Project_Title', 'Program'])
     nna_aon_formatted = fn.format_nna_aon(nna_aon_from_armap)
+    print("nna_aon_formatted:", len(nna_aon_formatted))
+    print("AOV_input_df:", len(AOV_input_df))
+
     aov_updated = fn.replace_old_nna_aon(nna_aon_formatted, AOV_input_df)
+
     fn.delete_feature_class(AOV_workspace, AOV_featureClass)
     fn.update_feature_class_from_dataframe(
         aov_updated, AOV_workspace, AOV_featureClass)

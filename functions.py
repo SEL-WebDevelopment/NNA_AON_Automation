@@ -1,5 +1,6 @@
 import arcpy
 import os
+import logging
 import pandas as pd
 import schema as schema
 
@@ -39,11 +40,9 @@ def feature_class_to_dataframe(workspace, feature_class_input):
         return None
 
 
-def find_nna_aon(df: pd.DataFrame) -> pd.DataFrame:
+def find_nna_aon(df: pd.DataFrame, columns_to_search: list) -> pd.DataFrame:
     # List of words to match
     words_to_match = ['NNA', 'AON']
-    # Columns to search in
-    columns_to_search = ['Project_Title', 'Program']
 
     # Create a pattern to search for words
     pattern = '|'.join(words_to_match)
@@ -53,8 +52,6 @@ def find_nna_aon(df: pd.DataFrame) -> pd.DataFrame:
     # Update the mask if any word is found in any of the specified columns
     for col in columns_to_search:
         mask |= df[col].str.contains(pattern, case=False, na=False)
-
-    print(f"Total NNA/AON records found: {len(df[mask])}")
 
     # Return the filtered DataFrame
     return df[mask]
@@ -84,6 +81,7 @@ def format_nna_aon(df: pd.DataFrame) -> pd.DataFrame:
 
     # Keep only the required fields in the DataFrame
     df = df[schema.AOV_Schema]
+    df.to_csv('format_nna_aon.csv', index=False)
     return df
 
 
@@ -94,30 +92,48 @@ def handle_nan(value):
     return value
 
 
-def replace_old_nna_aon(df, aov_df):
+def replace_old_nna_aon(df: pd.DataFrame, aov_df: pd.DataFrame) -> pd.DataFrame:
+    total_records_before = len(aov_df)  # 50039
+    logging.info(
+        f"Total records in FeatureClass before update: {total_records_before}")
+
+    if len(df) == 0 or len(aov_df) == 0:
+        logging.info("No NNA/AON records to update")
+        return aov_df
+
     # Ensure the DataFrames have the same columns
     if set(df.columns) != set(aov_df.columns):
         raise ValueError("Both DataFrames must have the same columns")
 
-    # Concatenate the two DataFrames
-    combined_df = pd.concat([aov_df, df], ignore_index=True)
+    # find the NNA/AON records in the AOV DataFrame
+    aov_nna_aon = find_nna_aon(aov_df, ['Proj_Title', 'Proj_Program_Code'])
+    logging.info(f"Total NNA/AON found records: {len(df)}")
+    logging.info(f"Total NNA/AON records in AOV: {len(aov_nna_aon)}")
 
-    # Drop duplicates based on all columns
-    unique_df = combined_df.drop_duplicates(keep='first')
+    # merge the NNA/AON records with the new records
+    merged_df = pd.concat([df, aov_nna_aon])
+    logging.info(f"Merged NNA/AON records: {len(merged_df)}")
+    merged_df.to_csv('new_nna_and_aon_nna.csv', index=False)
 
-    # Identify the rows in unique_df that were originally from formatted_df
-    # Using `isin` requires tuple conversion for row comparisons
-    original_rows = unique_df[unique_df.apply(
-        tuple, axis=1).isin(df.apply(tuple, axis=1))]
+    # Drop duplicates from aov nna/aon records and new records merged
+    unique_df = merged_df.drop_duplicates(keep=False)
+    logging.info(
+        f"Total unique records after dropping duplicates: {len(unique_df)}")
 
-    # Append only unique rows from formatted_df that are not in other_df
-    unique_formatted_df = df[~df.apply(tuple, axis=1).isin(
-        original_rows.apply(tuple, axis=1))]
+    # remove the NNA/AON records from the AOV DataFrame
+    aov_df = aov_df[~aov_df.index.isin(aov_nna_aon.index)]
+    logging.info(f"Total AOV records after removal: {len(aov_df)}")
 
-    # Append unique rows from formatted_df to other_df
-    updated_df = pd.concat([aov_df, unique_formatted_df], ignore_index=True)
-    print("convert_csv_fields:", len(convert_csv_fields(updated_df)))
-    return convert_csv_fields(updated_df)
+    # Concatenate both dataframes
+    updated_aov = pd.concat([unique_df, aov_df])
+
+    logging.info(
+        f"Total records in FeatureClass after update: {len(updated_aov)}")
+    logging.info(
+        f"Total new NNA/AON records after update: {len(updated_aov) - total_records_before}")
+    logging.info(f"----------------------------------------------------")
+
+    return convert_csv_fields(updated_aov)
 
 
 def convert_csv_fields(df):
@@ -278,10 +294,9 @@ def update_feature_class_from_dataframe(df, workspace, feature_class):
             Site_Start_Year = handle_nan(row['Site_Start_Year'])
             Site_End_Year = handle_nan(row['Site_End_Year'])
 
-            
-            point_geometry = arcpy.PointGeometry(arcpy.Point(Site_Long, Site_Lat), arcpy.SpatialReference(4326))
+            point_geometry = arcpy.PointGeometry(arcpy.Point(
+                Site_Long, Site_Lat), arcpy.SpatialReference(4326))
             projected_geometry = point_geometry.projectAs(spatial_reference)
-               
 
             # Insert the row into the feature class
             cursor.insertRow((
@@ -338,7 +353,6 @@ def update_feature_class_from_dataframe(df, workspace, feature_class):
                 Site_End_Year,
                 projected_geometry
             ))
-
 
     print(
         f"Feature class '{feature_class}' created successfully in {workspace}")
